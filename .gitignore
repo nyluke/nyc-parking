@@ -1,0 +1,5 @@
+parking_data.json
+parking_data.json.gz
+Parking_Regulation_Locations_and_Signs_20260303.csv
+*.csv
+__pycache__/

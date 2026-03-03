@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Parking Regulations Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+
+        #loading {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 10000; flex-direction: column; gap: 12px;
+        }
+        #loading .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #e0e0e0; border-top-color: #1a73e8;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading .text { color: #555; font-size: 14px; }
+
+        #info-panel {
+            position: fixed; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 12px 16px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 13px; color: #333; max-width: 260px;
+        }
+        #info-panel h2 { font-size: 15px; margin-bottom: 6px; }
+        #info-panel .stat { color: #666; }
+
+        .sign-popup { max-width: 320px; max-height: 300px; overflow-y: auto; }
+        .sign-popup h3 { font-size: 14px; margin-bottom: 6px; color: #1a73e8; }
+        .sign-popup .meta { font-size: 12px; color: #666; margin-bottom: 8px; }
+        .sign-popup ul { padding-left: 16px; margin: 0; }
+        .sign-popup li {
+            font-size: 12px; margin-bottom: 4px; line-height: 1.4;
+        }
+
+/* Search bar */
+        #search-bar {
+            position: fixed; top: 10px; left: 10px; z-index: 1001;
+            display: flex; gap: 6px;
+        }
+        #search-input {
+            width: 300px; padding: 10px 14px; border: none; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 14px;
+            outline: none; font-family: inherit;
+        }
+        #search-input:focus { box-shadow: 0 2px 12px rgba(26,115,232,0.35); }
+        #search-btn, #locate-btn {
+            width: 40px; height: 40px; border: none; border-radius: 8px;
+            background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #555; flex-shrink: 0;
+        }
+        #search-btn:hover, #locate-btn:hover { background: #f5f5f5; }
+        #search-results {
+            position: absolute; top: 46px; left: 0; width: 300px;
+            background: white; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-height: 240px; overflow-y: auto; display: none;
+        }
+        #search-results .result-item {
+            padding: 10px 14px; cursor: pointer; font-size: 13px;
+            border-bottom: 1px solid #eee;
+        }
+        #search-results .result-item:last-child { border-bottom: none; }
+        #search-results .result-item:hover { background: #f0f4ff; }
+        #search-results .result-item .addr { color: #333; }
+        #search-results .result-item .sub { color: #888; font-size: 11px; margin-top: 2px; }
+
+        .locate-pulse {
+            border: 3px solid #1a73e8;
+            border-radius: 50%;
+            width: 22px; height: 22px;
+            animation: pulse 1.5s ease-out infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="text">Loading 270K parking locations...</div>
+    </div>
+
+    <div id="search-bar">
+        <input type="text" id="search-input" placeholder="Search an address in NYC..." autocomplete="off" />
+        <button id="search-btn" title="Search">&#128269;</button>
+        <button id="locate-btn" title="Go to my location">&#9678;</button>
+        <div id="search-results"></div>
+    </div>
+
+
+<div id="info-panel">
+        <h2>NYC Parking Regulations</h2>
+        <div class="stat" id="count-display">Loading...</div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script>
+        const BOROUGH_NAMES = {
+            Bk: "Brooklyn", M: "Manhattan", Q: "Queens",
+            Bx: "Bronx", SI: "Staten Island"
+        };
+        const SIDE_NAMES = {
+            N: "North", S: "South", E: "East", W: "West"
+        };
+
+        // Init map centered on NYC
+        const map = L.map("map", {
+            center: [40.7128, -74.006],
+            zoom: 12,
+            preferCanvas: true,
+            zoomControl: false
+        });
+
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19
+        }).addTo(map);
+
+        let allData = [];
+        let clusterGroup = null;
+
+        function createPopupContent(item) {
+            // item: [lat, lon, borough, street, from, to, side, [signs]]
+            const [, , borough, street, from, to, side, signs] = item;
+            const boroughName = BOROUGH_NAMES[borough] || borough;
+            const sideName = SIDE_NAMES[side] || side;
+
+            let html = '<div class="sign-popup">';
+            html += `<h3>${street}</h3>`;
+            html += `<div class="meta">${boroughName} &mdash; ${sideName} side<br>`;
+            html += `Between ${from} and ${to}</div>`;
+            html += "<ul>";
+            for (const sign of signs) {
+                html += `<li>${sign}</li>`;
+            }
+            html += "</ul></div>";
+            return html;
+        }
+
+        function buildMarkers(data) {
+            if (clusterGroup) {
+                map.removeLayer(clusterGroup);
+            }
+
+            clusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                chunkInterval: 100,
+                chunkDelay: 10,
+                maxClusterRadius: 60,
+                disableClusteringAtZoom: 18,
+                spiderfyOnMaxZoom: true
+            });
+
+            let count = 0;
+            for (const item of data) {
+                const marker = L.marker([item[0], item[1]]);
+                marker.bindPopup(() => createPopupContent(item), { maxWidth: 350 });
+                clusterGroup.addLayer(marker);
+                count++;
+            }
+
+            map.addLayer(clusterGroup);
+            document.getElementById("count-display").textContent =
+                `${count.toLocaleString()} sign locations shown`;
+        }
+
+        // Load data
+        fetch("parking_data.json")
+            .then(r => r.json())
+            .then(data => {
+                allData = data;
+                document.getElementById("loading").style.display = "none";
+                buildMarkers(allData);
+            })
+            .catch(err => {
+                document.getElementById("loading").innerHTML =
+                    `<div class="text" style="color:red">Error loading data: ${err.message}</div>`;
+            });
+
+        // --- Address search (Nominatim) ---
+        const searchInput = document.getElementById("search-input");
+        const searchResults = document.getElementById("search-results");
+        let searchMarker = null;
+        let debounceTimer = null;
+
+        function clearSearchMarker() {
+            if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+        }
+
+        async function geocode(query) {
+            const url = `https://nominatim.openstreetmap.org/search?` +
+                `format=json&q=${encodeURIComponent(query)}&countrycodes=us` +
+                `&viewbox=-74.26,40.49,-73.7,40.92&bounded=1&limit=5`;
+            const res = await fetch(url, {
+                headers: { "Accept": "application/json" }
+            });
+            return res.json();
+        }
+
+        function showResults(results) {
+            if (!results.length) {
+                searchResults.innerHTML = '<div class="result-item"><div class="addr">No results found</div></div>';
+                searchResults.style.display = "block";
+                return;
+            }
+            searchResults.innerHTML = results.map(r =>
+                `<div class="result-item" data-lat="${r.lat}" data-lon="${r.lon}">
+                    <div class="addr">${r.display_name.split(",").slice(0, 2).join(",")}</div>
+                    <div class="sub">${r.display_name.split(",").slice(2, 5).join(",")}</div>
+                </div>`
+            ).join("");
+            searchResults.style.display = "block";
+
+            searchResults.querySelectorAll(".result-item").forEach(el => {
+                el.addEventListener("click", () => {
+                    const lat = parseFloat(el.dataset.lat);
+                    const lon = parseFloat(el.dataset.lon);
+                    goToLocation(lat, lon, el.querySelector(".addr").textContent);
+                    searchResults.style.display = "none";
+                });
+            });
+        }
+
+        function goToLocation(lat, lon, label) {
+            clearSearchMarker();
+            searchMarker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: "",
+                    html: '<div style="background:#1a73e8;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>',
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                })
+            }).addTo(map);
+            if (label) searchMarker.bindPopup(label).openPopup();
+            map.setView([lat, lon], 17);
+        }
+
+        searchInput.addEventListener("input", () => {
+            clearTimeout(debounceTimer);
+            const q = searchInput.value.trim();
+            if (q.length < 3) { searchResults.style.display = "none"; return; }
+            debounceTimer = setTimeout(async () => {
+                const results = await geocode(q);
+                showResults(results);
+            }, 350);
+        });
+
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                const q = searchInput.value.trim();
+                if (q.length >= 3) geocode(q).then(showResults);
+            }
+        });
+
+        document.getElementById("search-btn").addEventListener("click", () => {
+            const q = searchInput.value.trim();
+            if (q.length >= 3) geocode(q).then(showResults);
+        });
+
+        // Close results when clicking elsewhere
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest("#search-bar")) searchResults.style.display = "none";
+        });
+
+        // --- Geolocation ---
+        let locateMarker = null;
+        let locateCircle = null;
+
+        document.getElementById("locate-btn").addEventListener("click", () => {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+                    if (locateMarker) { map.removeLayer(locateMarker); map.removeLayer(locateCircle); }
+
+                    locateCircle = L.circle([lat, lon], {
+                        radius: accuracy,
+                        color: "#1a73e8", fillColor: "#1a73e8",
+                        fillOpacity: 0.1, weight: 1
+                    }).addTo(map);
+
+                    locateMarker = L.marker([lat, lon], {
+                        icon: L.divIcon({
+                            className: "",
+                            html: `<div style="position:relative;display:flex;align-items:center;justify-content:center">
+                                <div class="locate-pulse" style="position:absolute"></div>
+                                <div style="background:#1a73e8;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);position:relative;z-index:1"></div>
+                            </div>`,
+                            iconSize: [22, 22],
+                            iconAnchor: [11, 11]
+                        })
+                    }).addTo(map);
+                    locateMarker.bindPopup("You are here").openPopup();
+
+                    map.setView([lat, lon], 17);
+                },
+                (err) => {
+                    alert("Could not get your location: " + err.message);
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+    </script>
+</body>
+</html>
