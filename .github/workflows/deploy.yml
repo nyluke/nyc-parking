@@ -1,10 +1,9 @@
-name: Update parking data and deploy
+name: Deploy site
 
 on:
-  schedule:
-    # Run nightly at 5am UTC (midnight/1am ET)
-    - cron: "0 5 * * *"
-  workflow_dispatch: # Allow manual trigger
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -24,22 +23,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install pyproj
-
-      - name: Download and preprocess data
-        run: python preprocess.py
-
-      - name: Save data artifact
-        uses: actions/upload-artifact@v4
+      - name: Download latest data artifact
+        uses: dawidd6/action-download-artifact@v6
         with:
           name: parking-data
-          path: parking_data.json
-          overwrite: true
+          workflow: update-data.yml
+          path: .
+          if_no_artifact_found: fail
 
       - name: Prepare deploy directory
         run: |
