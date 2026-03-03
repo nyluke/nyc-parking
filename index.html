@@ -180,6 +180,33 @@
         let allData = [];
         let clusterGroup = null;
 
+        function formatSign(text) {
+            return text
+                // Broom / sanitation
+                .replace(/\(SANITATION BROOM SYMBOL\)/gi, "\uD83E\uDDF9")
+                // No parking
+                .replace(/\bNO PARKING\b/gi, "\uD83D\uDEAB\uD83C\uDD7F\uFE0F")
+                // No standing
+                .replace(/\bNO STANDING\b/gi, "\uD83D\uDEAB\uD83D\uDC86")
+                // No stopping
+                .replace(/\bNO STOPPING\b/gi, "\uD83D\uDEAB\u270B")
+                // Bus
+                .replace(/\(BUS (?:&|AND) HANDICAP SYMBOLS?\)/gi, "\uD83D\uDE8C\u267F")
+                .replace(/BUS STOP SIGN/gi, "\uD83D\uDE8F")
+                // Truck
+                .replace(/TRUCK \(SYMBOL\)/gi, "\uD83D\uDE9A")
+                // Taxi
+                .replace(/TAXI HAILING \(SYMBOL\)/gi, "\uD83D\uDE95")
+                // Moon & stars (night)
+                .replace(/MOON (?:&|AND) STARS \(SYMBOLS?\)/gi, "\uD83C\uDF19")
+                // Arrows
+                .replace(/-->/g, "\u27A1\uFE0F")
+                .replace(/<->/g, "\u2194\uFE0F")
+                // Strip supersedes references
+                .replace(/\(SUPERSEDES [^)]*\)/gi, "")
+                .trim();
+        }
+
         function createPopupContent(item) {
             // item: [lat, lon, borough, street, from, to, side, [signs]]
             const [, , borough, street, from, to, side, signs] = item;
@@ -192,7 +219,7 @@
             html += `Between ${from} and ${to}</div>`;
             html += "<ul>";
             for (const sign of signs) {
-                html += `<li>${sign}</li>`;
+                html += `<li>${formatSign(sign)}</li>`;
             }
             html += "</ul></div>";
             return html;
