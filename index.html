@@ -3,7 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NYC Parking Regulations Map</title>
+    <title>NYC Parking Regulations Map - Every Parking Sign in New York City</title>
+    <meta name="description" content="Interactive map of every parking sign in New York City. Search any address to see parking regulations, street cleaning schedules, and sign details for all five boroughs. Updated daily from official NYC DOT data.">
+    <meta name="keywords" content="NYC parking, New York City parking rules, parking regulations map, alternate side parking, street cleaning, parking signs, NYC DOT, can I park here NYC">
+    <link rel="canonical" href="https://parking.citybuilder.nyc">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NYC Parking Regulations Map">
+    <meta property="og:description" content="Interactive map of every parking sign in NYC. Search any address to instantly see all parking rules, street cleaning schedules, and restrictions.">
+    <meta property="og:url" content="https://parking.citybuilder.nyc">
+    <meta property="og:site_name" content="CityBuilder">
+    <meta property="og:image" content="https://parking.citybuilder.nyc/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NYC Parking Regulations Map">
+    <meta name="twitter:description" content="Interactive map of every parking sign in NYC. Search any address to see all parking rules and restrictions.">
+    <meta name="twitter:image" content="https://parking.citybuilder.nyc/og-image.png">
+
+    <!-- Favicon / Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="NYC Parking">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -108,6 +140,16 @@
     </div>
 
     <div id="map"></div>
+
+    <!-- SEO: crawlable content for search engines -->
+    <noscript>
+        <div style="padding:40px;max-width:700px;margin:0 auto">
+            <h1>NYC Parking Regulations Map</h1>
+            <p>An interactive map of every parking sign across all five boroughs of New York City — Manhattan, Brooklyn, Queens, the Bronx, and Staten Island. Search any address to see parking regulations including alternate side parking, street cleaning schedules, no parking zones, metered parking, and commercial vehicle restrictions.</p>
+            <p>Data sourced from the official NYC Department of Transportation parking regulation dataset, updated daily. Over 270,000 sign locations covering more than 440,000 individual parking signs.</p>
+            <p>Built by <a href="https://citybuilder.nyc">CityBuilder</a>.</p>
+        </div>
+    </noscript>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>

@@ -39,6 +39,12 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp parking_data.json _site/
+          cp manifest.json _site/
+          cp favicon.ico _site/
+          cp icon.svg _site/
+          cp icon-192.png _site/
+          cp icon-512.png _site/
+          cp og-image.png _site/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
